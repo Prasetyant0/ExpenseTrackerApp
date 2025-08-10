@@ -1,16 +1,38 @@
-# expense_tracker_app
+# 💰 Expense Tracker App
 
-A new Flutter project.
+Aplikasi mobile untuk mengelola pengeluaran dan budget pribadi yang dibangun dengan Flutter. Aplikasi ini terhubung dengan backend Express.js untuk menyediakan fitur manajemen keuangan yang komprehensif.
 
-## Getting Started
+## 🚀 Status Development
 
-This project is a starting point for a Flutter application.
+**🔧 In Development** - Sedang dalam tahap pengembangan aktif
 
-A few resources to get you started if this is your first Flutter project:
+## 🛠️ Tech Stack
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### Frontend (Flutter)
+- **Framework**: Flutter 3.8+
+- **Language**: Dart
+- **State Management**: Provider
+- **HTTP Client**: Dio
+- **Local Storage**: SharedPreferences, FlutterSecureStorage
+- **Charts**: FL Chart
+- **UI**: Material 3 Design
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Backend Integration
+- **API**: Express.js REST API
+- **Database**: MySQL
+- **Authentication**: JWT
+- **Server**: Node.js
+
+## 📱 Features (Planned)
+
+- 🔐 User Authentication (Register/Login)
+- 📊 Dashboard dengan overview keuangan
+- 💸 Manajemen transaksi (Income/Expense)
+- 🎯 Budget tracking dan monitoring
+- 📈 Reports dan analytics
+- 🔔 Notifications dan reminders
+- 📱 Multi-platform (Android & iOS)
+
+---
+
+*Developed with ❤️ using Flutter*
