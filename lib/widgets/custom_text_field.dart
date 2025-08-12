@@ -9,6 +9,7 @@ class CustomTextField extends StatefulWidget {
   final void Function(String)? onChanged;
   final bool obscureText;
   final TextInputType keyboardType;
+  final TextCapitalization? textCapitalization;
   final Widget? prefixIcon;
   final Widget? suffixIcon;
   final bool enabled;
@@ -25,6 +26,7 @@ class CustomTextField extends StatefulWidget {
     this.onChanged,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
+    this.textCapitalization,
     this.prefixIcon,
     this.suffixIcon,
     this.enabled = true,
@@ -65,6 +67,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           onChanged: widget.onChanged,
           obscureText: _obscureText,
           keyboardType: widget.keyboardType,
+          textCapitalization: widget.textCapitalization ?? TextCapitalization.none,
           enabled: widget.enabled,
           maxLines: _obscureText ? 1 : widget.maxLines,
           minLines: widget.minLines,

@@ -1,199 +1,142 @@
-import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../core/api/api_client.dart';
-import '../core/constants/api_constants.dart';
 import '../models/user.dart';
+import '../core/api/api_client.dart';
 
 class AuthService {
   final ApiClient _apiClient = ApiClient();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
-  static final AuthService _instance = AuthService._internal();
-  factory AuthService() => _instance;
-
-  AuthService._internal();
-
-  Future<AuthResult> register({
-    required String fullName,
-    required String email,
-    required String password,
-    required String passwordConfirmation,
-  }) async {
-    try {
-      final response = await _apiClient.post(
-        ApiConstants.register,
-        data: {
-          'full_name': fullName,
-          'email': email,
-          'password': password,
-          'password_confirmation': passwordConfirmation,
-        },
-      );
-
-      final token = response['token'] as String;
-      final userData = response['user'] as Map<String, dynamic>;
-      final user = User.fromJson(userData);
-
-      await _saveAuthData(token, user);
-
-      return AuthResult.success(user: user, token: token);
-    } on ApiException catch (e) {
-      return AuthResult.failure(message: e.message);
-    } catch (e) {
-      return AuthResult.failure(message: 'An unexpected error occurred');
-    }
-  }
-
-  Future<AuthResult> login({
+  // Login
+  Future<User> login({
     required String email,
     required String password,
   }) async {
     try {
-      final response = await _apiClient.post(
-        ApiConstants.login,
+      final res = await _apiClient.post(
+        '/auth/login',
         data: {
           'email': email,
           'password': password,
         },
       );
 
-      final token = response['token'] as String;
-      final userData = response['user'] as Map<String, dynamic>;
-      final user = User.fromJson(userData);
+      final data = res['data'];
+      final userData = data['user'];
+      final tokens = data['tokens'];
 
-      await _saveAuthData(token, user);
+      await _secureStorage.write(key: 'auth_token', value: tokens['accessToken']);
+      await _secureStorage.write(key: 'refresh_token', value: tokens['refreshToken']);
 
-      return AuthResult.success(user: user, token: token);
-    } on ApiException catch (e) {
-      return AuthResult.failure(message: e.message);
+      return User.fromJson(userData);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw Exception('Email atau password salah');
+      }
+      throw Exception('Login gagal: ${e.message}');
     } catch (e) {
-      return AuthResult.failure(message: 'An unexpected error occurred');
+      throw Exception('Login gagal: $e');
     }
   }
 
-  Future<AuthResult> getProfile() async {
-    try {
-      final response = await _apiClient.get(ApiConstants.profile);
-      final userData = response['user'] as Map<String, dynamic>;
-      final user = User.fromJson(userData);
-
-      // Update stored user data
-      await _storage.write(
-        key: ApiConstants.userKey,
-        value: jsonEncode(user.toJson()),
-      );
-
-      return AuthResult.success(user: user);
-    } on ApiException catch (e) {
-      return AuthResult.failure(message: e.message);
-    } catch (e) {
-      return AuthResult.failure(message: 'An unexpected error occurred');
-    }
-  }
-
-  Future<AuthResult> updateProfile({
-    required String fullName,
+  Future<User> register({
+    required String name,
     required String email,
+    required String password,
   }) async {
     try {
-      final response = await _apiClient.put(
-        ApiConstants.updateProfile,
+      final res = await _apiClient.post(
+        '/auth/register',
         data: {
-          'full_name': fullName,
+          'name': name,
           'email': email,
+          'password': password,
         },
       );
 
-      final userData = response['user'] as Map<String, dynamic>;
-      final user = User.fromJson(userData);
+      final data = res['data'];
+      final userData = data['user'];
+      final tokens = data['tokens'];
 
-      // Update stored user data
-      await _storage.write(
-        key: ApiConstants.userKey,
-        value: jsonEncode(user.toJson()),
+      await _secureStorage.write(
+        key: 'auth_token',
+        value: tokens['accessToken'],
+      );
+      await _secureStorage.write(
+        key: 'refresh_token',
+        value: tokens['refreshToken'],
       );
 
-      return AuthResult.success(user: user);
-    } on ApiException catch (e) {
-      return AuthResult.failure(message: e.message);
+      return User.fromJson(userData);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 409) {
+        throw Exception('Email sudah terdaftar');
+      }
+      if (e.response?.statusCode == 422) {
+        throw Exception('Data tidak valid');
+      }
+      throw Exception('Registrasi gagal: ${e.message}');
     } catch (e) {
-      return AuthResult.failure(message: 'An unexpected error occurred');
+      throw Exception('Registrasi gagal: $e');
     }
   }
 
-  Future<void> logout() async {
-    try {
-      // Try to logout from server, but don't throw if it fails
-      await _apiClient.post('/auth/logout');
-    } catch (e) {
-      // Ignore server logout errors
-    }
-
-    // Always clear local data
-    await _clearAuthData();
-  }
-
-  Future<bool> isLoggedIn() async {
-    final token = await _storage.read(key: ApiConstants.tokenKey);
-    return token != null && token.isNotEmpty;
-  }
-
+  // Current user (init)
   Future<User?> getCurrentUser() async {
     try {
-      final userJson = await _storage.read(key: ApiConstants.userKey);
-      if (userJson != null) {
-        final userData = jsonDecode(userJson) as Map<String, dynamic>;
-        return User.fromJson(userData);
+      final token = await _secureStorage.read(key: 'auth_token');
+      if (token == null) return null;
+
+      final res = await _apiClient.get('/auth/me');
+
+      final dynamic payload = res['data'] ?? res['user'] ?? res;
+      if (payload is Map<String, dynamic>) {
+        return User.fromJson(payload);
       }
       return null;
     } catch (e) {
+      await _secureStorage.delete(key: 'auth_token');
+      await _secureStorage.delete(key: 'refresh_token');
+      return null;
+    }
+  }
+
+  // Logout
+  Future<void> logout() async {
+    try {
+      await _apiClient.post('/auth/logout');
+    } catch (e) {
+      // Abaikan error server; tetap clear token lokal
+    } finally {
+      await _secureStorage.delete(key: 'auth_token');
+      await _secureStorage.delete(key: 'refresh_token');
+    }
+  }
+
+  Future<String?> refreshToken() async {
+    try {
+      final refreshToken = await _secureStorage.read(key: 'refresh_token');
+      if (refreshToken == null) return null;
+
+      final res = await _apiClient.post(
+        '/auth/refresh',
+        data: {
+          'refresh_token': refreshToken,
+        },
+      );
+
+      final newAccessToken = res['data']['accessToken'];
+      await _secureStorage.write(key: 'auth_token', value: newAccessToken);
+
+      return newAccessToken;
+    } catch (e) {
+      await _secureStorage.delete(key: 'auth_token');
+      await _secureStorage.delete(key: 'refresh_token');
       return null;
     }
   }
 
   Future<String?> getToken() async {
-    return await _storage.read(key: ApiConstants.tokenKey);
-  }
-
-  Future<void> _saveAuthData(String token, User user) async {
-    await _apiClient.setToken(token);
-    await _storage.write(
-      key: ApiConstants.userKey,
-      value: jsonEncode(user.toJson()),
-    );
-  }
-
-  Future<void> _clearAuthData() async {
-    await _apiClient.clearToken();
-    await _storage.delete(key: ApiConstants.userKey);
-  }
-}
-
-class AuthResult {
-  final bool success;
-  final String? message;
-  final User? user;
-  final String? token;
-
-  AuthResult._({
-    required this.success,
-    this.message,
-    this.user,
-    this.token,
-  });
-
-  factory AuthResult.success({User? user, String? token}) {
-    return AuthResult._(
-      success: true,
-      user: user,
-      token: token,
-    );
-  }
-
-  factory AuthResult.failure({required String message}) {
-    return AuthResult._(
-      success: false,
-      message: message,
-    );
+    return await _secureStorage.read(key: 'auth_token');
   }
 }

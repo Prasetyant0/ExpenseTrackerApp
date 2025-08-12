@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/utils/app_theme.dart';
 import 'core/constants/app_constants.dart';
+import 'core/widgets/app_logo.dart';
 import 'providers/auth_provider.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/dashboard/dashboard_screen.dart';
 
 void main() {
   runApp(const ExpenseTrackerApp());
@@ -24,6 +27,10 @@ class ExpenseTrackerApp extends StatelessWidget {
         themeMode: ThemeMode.system,
         home: const SplashScreen(),
         debugShowCheckedModeBanner: false,
+        routes: {
+          '/login': (context) => const LoginScreen(),
+          '/dashboard': (context) => const DashboardScreen(),
+        },
       ),
     );
   }
@@ -37,14 +44,37 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+
   @override
   void initState() {
     super.initState();
-    // Defer initialization to avoid setState during build
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _animationController.forward();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeApp();
     });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeApp() async {
@@ -55,119 +85,76 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Navigate based on authentication status
     if (authProvider.isAuthenticated) {
-      // TODO: Navigate to main screen
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const TempHomeScreen()),
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     } else {
-      // TODO: Navigate to login screen
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const TempLoginScreen()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     }
-  }  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.primary,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.account_balance_wallet,
-              size: 80,
-              color: AppColors.white,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              AppStrings.appName,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: AppColors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
-            ),
-          ],
-        ),
-      ),
-    );
   }
-}
-
-// Temporary screens
-class TempHomeScreen extends StatelessWidget {
-  const TempHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              Provider.of<AuthProvider>(context, listen: false).logout();
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const TempLoginScreen()),
-              );
-            },
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.primary,
+              AppColors.primary.withOpacity(0.8),
+            ],
           ),
-        ],
-      ),
-      body: const Center(
-        child: Text('Welcome to Expense Tracker!'),
-      ),
-    );
-  }
-}
-
-class TempLoginScreen extends StatelessWidget {
-  const TempLoginScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+        ),
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.account_balance_wallet,
-                size: 80,
-                color: AppColors.primary,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                AppStrings.appName,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+              // Custom Animated Logo
+              ScaleTransition(
+                scale: _scaleAnimation,
+                child: const AppLogo(
+                  size: 120,
+                  color: AppColors.white,
                 ),
               ),
-              const SizedBox(height: 48),
-              ElevatedButton(
-                onPressed: () {
-                  // TODO: Navigate to login screen
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Login screen coming soon!')),
-                  );
-                },
-                child: const Text('Login'),
+
+              const SizedBox(height: 32),
+
+              // App Name with Animation
+              FadeTransition(
+                opacity: _animationController,
+                child: Text(
+                  AppStrings.appName,
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
-              OutlinedButton(
-                onPressed: () {
-                  // TODO: Navigate to register screen
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Register screen coming soon!')),
-                  );
-                },
-                child: const Text('Register'),
+
+              const SizedBox(height: 8),
+
+              FadeTransition(
+                opacity: _animationController,
+                child: Text(
+                  'Kelola Keuangan dengan Mudah',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.white.withOpacity(0.8),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 48),
+
+              // Loading Indicator
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                strokeWidth: 2,
               ),
             ],
           ),

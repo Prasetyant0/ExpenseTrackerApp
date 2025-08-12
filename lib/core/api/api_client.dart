@@ -26,7 +26,7 @@ class ApiClient {
       baseUrl: ApiConstants.baseUrl,
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
-      headers: ApiConstants.headers,
+      headers: ApiConstants.defaultHeaders,
     ));
 
     _setupInterceptors();
@@ -61,15 +61,15 @@ class ApiClient {
   }
 
   Future<String?> getToken() async {
-    return await _storage.read(key: ApiConstants.tokenKey);
+    return await _storage.read(key: ApiConstants.authTokenKey); // FIX: was tokenKey
   }
 
   Future<void> setToken(String token) async {
-    await _storage.write(key: ApiConstants.tokenKey, value: token);
+    await _storage.write(key: ApiConstants.authTokenKey, value: token); // FIX
   }
 
   Future<void> clearToken() async {
-    await _storage.delete(key: ApiConstants.tokenKey);
+    await _storage.delete(key: ApiConstants.authTokenKey); // FIX
   }
 
   Future<Map<String, dynamic>> get(

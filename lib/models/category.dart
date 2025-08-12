@@ -1,80 +1,96 @@
+enum CategoryType {
+  income,
+  expense,
+}
+
 class Category {
   final int id;
   final String name;
-  final String? icon;
-  final String? color;
-  final String type; // 'income' or 'expense'
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final CategoryType type;
+  final String icon;
+  final String color;
+  final bool isDefault;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   Category({
     required this.id,
     required this.name,
-    this.icon,
-    this.color,
     required this.type,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.icon,
+    required this.color,
+    this.isDefault = false,
+    this.createdAt,
+    this.updatedAt,
   });
 
+  // From JSON
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
       id: json['id'] as int,
       name: json['name'] as String,
-      icon: json['icon'] as String?,
-      color: json['color'] as String?,
-      type: json['type'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      type: json['type'] == 'income'
+        ? CategoryType.income
+        : CategoryType.expense,
+      icon: json['icon'] as String,
+      color: json['color'] as String,
+      isDefault: json['is_default'] as bool? ?? false,
+      createdAt: json['created_at'] != null
+        ? DateTime.parse(json['created_at'])
+        : null,
+      updatedAt: json['updated_at'] != null
+        ? DateTime.parse(json['updated_at'])
+        : null,
     );
   }
 
+  // To JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
+      'type': type == CategoryType.income ? 'income' : 'expense',
       'icon': icon,
       'color': color,
-      'type': type,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'is_default': isDefault,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
   }
 
   Category copyWith({
     int? id,
     String? name,
+    CategoryType? type,
     String? icon,
     String? color,
-    String? type,
+    bool? isDefault,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return Category(
       id: id ?? this.id,
       name: name ?? this.name,
+      type: type ?? this.type,
       icon: icon ?? this.icon,
       color: color ?? this.color,
-      type: type ?? this.type,
+      isDefault: isDefault ?? this.isDefault,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  bool get isIncome => type == 'income';
-  bool get isExpense => type == 'expense';
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Category &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name;
 
   @override
-  String toString() {
-    return 'Category(id: $id, name: $name, type: $type)';
-  }
+  int get hashCode => id.hashCode ^ name.hashCode;
 
   @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is Category && other.id == id;
-  }
-
-  @override
-  int get hashCode => id.hashCode;
+  String toString() => 'Category(id: $id, name: $name, type: $type)';
 }

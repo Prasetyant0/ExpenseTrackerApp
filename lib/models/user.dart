@@ -1,73 +1,87 @@
 class User {
   final int id;
-  final String fullName;
+  final String name;
   final String email;
-  final DateTime? emailVerifiedAt;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final String? avatarUrl;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   User({
     required this.id,
-    required this.fullName,
+    required this.name,
     required this.email,
-    this.emailVerifiedAt,
-    required this.createdAt,
-    required this.updatedAt,
+    this.avatarUrl,
+    this.createdAt,
+    this.updatedAt,
   });
 
+  // From JSON - sesuai backend response
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] as int,
-      fullName: json['full_name'] as String,
+      name: json['name'] as String,
       email: json['email'] as String,
-      emailVerifiedAt: json['email_verified_at'] != null
-          ? DateTime.parse(json['email_verified_at'] as String)
+      avatarUrl: json['avatar_url'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
           : null,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null,
     );
   }
 
+  // To JSON - untuk request ke backend
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'full_name': fullName,
+      'name': name,
       'email': email,
-      'email_verified_at': emailVerifiedAt?.toIso8601String(),
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'avatar_url': avatarUrl,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
+
+  // For registration request body
+  Map<String, dynamic> toRegistrationJson() {
+    return {
+      'name': name,
+      'email': email,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
     };
   }
 
   User copyWith({
     int? id,
-    String? fullName,
+    String? name,
     String? email,
-    DateTime? emailVerifiedAt,
+    String? avatarUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return User(
       id: id ?? this.id,
-      fullName: fullName ?? this.fullName,
+      name: name ?? this.name,
       email: email ?? this.email,
-      emailVerifiedAt: emailVerifiedAt ?? this.emailVerifiedAt,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
   @override
-  String toString() {
-    return 'User(id: $id, fullName: $fullName, email: $email)';
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is User &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          email == other.email;
 
   @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is User && other.id == id && other.email == email;
-  }
+  int get hashCode => id.hashCode ^ name.hashCode ^ email.hashCode;
 
   @override
-  int get hashCode => id.hashCode ^ email.hashCode;
+  String toString() => 'User(id: $id, name: $name, email: $email)';
 }
